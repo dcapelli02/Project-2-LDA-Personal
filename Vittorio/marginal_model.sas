@@ -1,3 +1,13 @@
+data alzheimer25;
+	set '/home/u64347574/alzheimer25.sas7bdat';
+run;
+
+
+proc means data=alzheimer25 noprint;
+    var AGE BMI;
+    output out=stats mean=mean_age mean_bmi std=sd_age sd_bmi;
+run;
+
 data alzheimer_long;
     if _n_ = 1 then set stats;   
     set alzheimer25;
@@ -106,19 +116,7 @@ run;
 /* ------------------------------------------------------ */
 /* ------------------------------------------------------ */
 /* ------------------------------------------------------ */
-/* -/* --- EXCHANGEABLE --- */
-ods output ParameterEstimates = glimmix_exch_raw;
 
-proc glimmix data=alzheimer_long method=RSPL empirical;
-    class PATID SEX TIMECLSS;
-    model CDRSB_CAT(event='1') =
-            SEX AGE_STD BMI_STD ADL ABPET_BASE TAUPET_BASE
-            TIME
-            SEX*TIME AGE_STD*TIME BMI_STD*TIME
-            ADL*TIME ABPET_BASE*TIME TAUPET_BASE*TIME
-            / dist=binary link=logit solution;
-    random _residual_ / subject=PATID type=cs;
-run;
 
 
 /* --- Linearization Based Method EXCHANGEABLE --- */
@@ -162,8 +160,6 @@ proc glimmix data=alzheimer_long method=RSPL empirical;
             / dist=binary link=logit solution;
     random _residual_ / subject=PATID type=un;
 run;
-
-
 
 
 
