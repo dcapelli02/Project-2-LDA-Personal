@@ -485,124 +485,16 @@ cat("Best AR(1): age, bmi, sex, tau_base, year, age:year and bmi:year. QIC = 780
 
 head(results_ind)
 summary(best_model_ind)
-cat("Best Independence: age, bmi, sex, tau_base, year, age:year and bmi:year. QIC = 7808")
+sucat("Best Independence: age, bmi, sex, tau_base, year, age:year and bmi:year. QIC = 7808")
 
 
 
 
 # LOOK FOR THE BEST MODEL MANUALLY
 
-full_model <- geeglm(
-  cdrsb ~ (sex + age + bmi) * year + ab_base + tau_base + adl_num + ab_base:year + tau_base:year + adl_num:year,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ (sex + age + bmi) * year + ab_base + tau_base + adl_num + ab_base:year + tau_base:year,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ (sex + age + bmi) * year + ab_base + tau_base + adl_num + tau_base:year,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ (sex + age + bmi) * year + ab_base + tau_base + adl_num,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ sex + age + bmi + year + age:year + bmi:year + ab_base + tau_base + adl_num,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ sex + age + bmi + year + bmi:year + ab_base + tau_base + adl_num,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ sex + age + bmi + year + bmi:year + ab_base + tau_base,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ sex + age + bmi + year + bmi:year + tau_base,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
-
-full_model <- geeglm(
-  cdrsb ~ sex + age + bmi + year + bmi:year,
-  family = binomial("logit"), 
-  data = alz_clean, 
-  id = sample, 
-  waves = year_seq, 
-  corstr = "ar1",
-  na.action = "na.fail"
-)
-
-summary(full_model)
 
 cat("Tried eliminating the variable with the greatest p-value but got a model with high p-values from adl, ab_base and tau_base.")
 cat("This means they are not rellevant because age, sex and bmi are 'stealing' explanatory power?")
-
 
 
 
