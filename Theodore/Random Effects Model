@@ -1,0 +1,31 @@
+proc glimmix data=alzheimer_long method=laplace;
+    class PATID TIMECLSS;
+
+    model CDRSB_CAT(event='1') = TIME AGE_STD BMI_STD
+                                 BPRS_BASE ABPET_BASE TAUPET_BASE
+                                 / dist=binomial link=logit solution;
+
+    random intercept TIME / subject=PATID solution;
+
+    ods output SolutionR=eb_glmm;
+run;
+
+
+proc means data=eb_glmm;
+    var Estimate;
+run;
+
+proc corr data=eb_glmm;
+    where Effect='Intercept';
+    var Estimate;
+    with CDRSB_CAT;
+run;
+
+proc sgplot data=eb_glmm;
+    where Effect in ('Intercept','TIME');
+    scatter x=Intercept y=TIME / group=PATID;
+run;
+
+proc sort data=eb_glmm;
+    by descending Estimate;
+run;
