@@ -1,0 +1,262 @@
+/* examine bayesian estimates for random effects */
+
+/* MODEL 1: Random Intercept Only */
+proc glimmix data=alzheimer_long method=laplace;
+    class PATID;
+    model CDRSB_CAT(event='1') = TIME SEX AGE_STD BMI_STD ADL ABPET TAUPET 
+          SEX*TIME AGE_STD*TIME BMI_STD*TIME
+         / dist=binomial link=logit solution;
+    random intercept / subject=PATID solution;
+    output out=preds1 pred(ilink)=pred_prob;
+    ods output SolutionR=random_effects1;
+run;
+
+/* MODEL 2: Random Intercept + Random Slope for TIME */
+proc glimmix data=alzheimer_long method=laplace;
+    class PATID;
+    model CDRSB_CAT(event='1') = TIME SEX AGE_STD BMI_STD ADL ABPET TAUPET 
+          SEX*TIME AGE_STD*TIME BMI_STD*TIME
+         / dist=binomial link=logit solution;
+    random intercept TIME / subject=PATID solution;
+    output out=preds2 pred(ilink)=pred_prob;
+    ods output SolutionR=random_effects2;
+run;
+
+/* analyze random intercepts in model 1 */
+
+/* Summary statistics of random intercepts */
+proc means data=random_effects1 n mean std min q1 median q3 max;
+    var Estimate;
+    title 'Summary Statistics: Random Intercepts (Model 1)';
+run;
+
+/* Distribution of random intercepts */
+proc univariate data=random_effects1 plots;
+    var Estimate;
+    histogram Estimate / normal kernel;
+    qqplot Estimate / normal(mu=est sigma=est);
+    title 'Distribution of Random Intercepts';
+run;
+
+/* Histogram with reference line at 0 */
+proc sgplot data=random_effects1;
+    histogram Estimate / binwidth=0.1;
+    density Estimate / type=kernel;
+    density Estimate / type=normal;
+    refline 0 / axis=x lineattrs=(color=red pattern=dash) label='Mean=0';
+    xaxis label='Random Intercept (EBLUP)';
+    yaxis label='Frequency';
+    title 'Distribution of Random Intercepts';
+run;
+
+/* caterpillar plot for random intercepts */
+proc sort data=random_effects1; by Estimate; run;
+
+data random_effects1_ranked;
+    set random_effects1;
+    rank = _N_;
+    lower = Estimate - 1.96*StdErrPred;
+    upper = Estimate + 1.96*StdErrPred;
+run;
+
+proc sgplot data=random_effects1_ranked;
+    scatter x=rank y=Estimate / markerattrs=(size=3);
+    highlow x=rank low=lower high=upper / lineattrs=(pattern=solid);
+    refline 0 / axis=y lineattrs=(color=red pattern=dash);
+    xaxis label='Patient Rank' values=(0 to 1000 by 100);
+    yaxis label='Random Intercept (EBLUP)';
+    title 'Caterpillar Plot: Random Intercepts with 95% CI';
+run;
+
+/* analyze random effects model 2 */
+
+/* Separate intercepts and slopes */
+data random_int2 random_slope2;
+    set random_effects2;
+    if Effect='Intercept' then output random_int2;
+    else if Effect='TIME' then output random_slope2;
+run;
+
+/* Summary statistics */
+proc means data=random_int2 n mean std min q1 median q3 max;
+    var Estimate;
+    title 'Summary Statistics: Random Intercepts (Model 2)';
+run;
+
+proc means data=random_slope2 n mean std min q1 median q3 max;
+    var Estimate;
+    title 'Summary Statistics: Random Slopes for TIME (Model 2)';
+run;
+
+/* side-by-side distributions */
+proc univariate data=random_int2 plots;
+    var Estimate;
+    histogram Estimate / normal kernel;
+    qqplot Estimate / normal(mu=est sigma=est);
+    title 'Distribution of Random Intercepts (Model 2)';
+run;
+
+proc univariate data=random_slope2 plots;
+    var Estimate;
+    histogram Estimate / normal kernel;
+    qqplot Estimate / normal(mu=est sigma=est);
+    title 'Distribution of Random Slopes (Model 2)';
+run;
+
+/* Combined histogram plot */
+data combined_re;
+    set random_int2 (in=a) random_slope2 (in=b);
+    if a then Effect_Type='Random Intercept';
+    else if b then Effect_Type='Random Slope (TIME)';
+run;
+
+proc sgpanel data=combined_re;
+    panelby Effect_Type / columns=2;
+    histogram Estimate / binwidth=0.1;
+    density Estimate / type=kernel;
+    refline 0 / axis=x lineattrs=(color=red pattern=dash);
+    rowaxis label='Frequency';
+    colaxis label='EBLUP Estimate';
+    title 'Distribution of Random Effects (Model 2)';
+run;
+
+/* caterpillar plots for Model 2 */
+proc sort data=random_int2; by Estimate; run;
+data random_int2_ranked;
+    set random_int2;
+    rank = _N_;
+    lower = Estimate - 1.96*StdErrPred;
+    upper = Estimate + 1.96*StdErrPred;
+run;
+
+proc sgplot data=random_int2_ranked;
+    scatter x=rank y=Estimate / markerattrs=(size=3);
+    highlow x=rank low=lower high=upper / lineattrs=(pattern=solid);
+    refline 0 / axis=y lineattrs=(color=red pattern=dash);
+    xaxis label='Patient Rank';
+    yaxis label='Random Intercept (EBLUP)';
+    title 'Caterpillar Plot: Random Intercepts (Model 2)';
+run;
+
+proc sort data=random_slope2; by Estimate; run;
+data random_slope2_ranked;
+    set random_slope2;
+    rank = _N_;
+    lower = Estimate - 1.96*StdErrPred;
+    upper = Estimate + 1.96*StdErrPred;
+run;
+
+proc sgplot data=random_slope2_ranked;
+    scatter x=rank y=Estimate / markerattrs=(size=3);
+    highlow x=rank low=lower high=upper / lineattrs=(pattern=solid);
+    refline 0 / axis=y lineattrs=(color=red pattern=dash);
+    xaxis label='Patient Rank';
+    yaxis label='Random Slope (EBLUP)';
+    title 'Caterpillar Plot: Random Slopes for TIME (Model 2)';
+run;
+
+/* correlation plot of random intercepts and slopes */
+
+/* merge intercepts and slopes by PATID */
+proc sql;
+    create table re_merged as
+    select a.Subject as PATID,
+           a.Estimate as Intercept,
+           b.Estimate as Slope
+    from random_int2 as a
+    left join random_slope2 as b
+    on a.Subject = b.Subject;
+quit;
+
+/* scatter plot of intercepts vs slopes */
+proc sgplot data=re_merged;
+    scatter x=Intercept y=Slope / markerattrs=(size=5);
+    reg x=Intercept y=Slope / lineattrs=(color=red);
+    refline 0 / axis=x lineattrs=(pattern=dash color=gray);
+    refline 0 / axis=y lineattrs=(pattern=dash color=gray);
+    xaxis label='Random Intercept';
+    yaxis label='Random Slope (TIME)';
+    title 'Correlation between Random Intercepts and Slopes';
+run;
+
+/* correlation statistics */
+proc corr data=re_merged plots=scatter;
+    var Intercept Slope;
+    title 'Correlation: Random Intercepts vs Random Slopes';
+run;
+
+/* identify outlier patients */
+
+/* patients with outlier intercepts in model 1 */
+proc sort data=random_effects1; by descending Estimate; run;
+
+data extreme_intercepts;
+    set random_effects1;
+    if _N_ <= 10 then Extreme_Type = 'Top 10 Highest';
+run;
+
+proc sort data=random_effects1; by Estimate; run;
+data temp;
+    set random_effects1;
+    if _N_ <= 10 then Extreme_Type = 'Top 10 Lowest';
+run;
+
+data extreme_intercepts;
+    set extreme_intercepts temp;
+run;
+
+proc print data=extreme_intercepts;
+    var Subject Estimate StdErrPred Extreme_Type;
+    title 'Patients with Extreme Random Intercepts';
+run;
+
+/* Patients with extreme slopes in model 2 */
+proc sort data=random_slope2; by descending Estimate; run;
+data extreme_slopes;
+    set random_slope2;
+    if _N_ <= 10 then Extreme_Type = 'Top 10 Steepest Increase';
+run;
+
+proc sort data=random_slope2; by Estimate; run;
+data temp;
+    set random_slope2;
+    if _N_ <= 10 then Extreme_Type = 'Top 10 Steepest Decrease';
+run;
+
+data extreme_slopes;
+    set extreme_slopes temp;
+run;
+
+proc print data=extreme_slopes;
+    var Subject Estimate StdErrPred Extreme_Type;
+    title 'Patients with Extreme Random Slopes';
+run;
+
+
+/* compare model predictions */
+
+/*compare predicted probabilities between models */
+proc sql;
+    create table model_comparison as
+    select a.PATID, a.TIME, a.CDRSB_CAT,
+           a.pred_prob as pred_model1,
+           b.pred_prob as pred_model2,
+           abs(a.pred_prob - b.pred_prob) as pred_diff
+    from preds1 as a
+    left join preds2 as b
+    on a.PATID = b.PATID and a.TIME = b.TIME;
+quit;
+
+proc means data=model_comparison mean std min max;
+    var pred_diff;
+    title 'Difference in Predicted Probabilities: Model 1 vs Model 2';
+run;
+
+proc sgplot data=model_comparison;
+    scatter x=pred_model1 y=pred_model2 / markerattrs=(size=3);
+    lineparm x=0 y=0 slope=1 / lineattrs=(color=red pattern=dash);
+    xaxis label='Predicted Probability (Model 1: Random Intercept)';
+    yaxis label='Predicted Probability (Model 2: Random Intercept+Slope)';
+    title 'Model Comparison: Predicted Probabilities';
+run;
+
