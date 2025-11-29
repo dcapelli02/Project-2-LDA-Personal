@@ -485,8 +485,33 @@ cat("Best AR(1): age, bmi, sex, tau_base, year, age:year and bmi:year. QIC = 780
 
 head(results_ind)
 summary(best_model_ind)
-sucat("Best Independence: age, bmi, sex, tau_base, year, age:year and bmi:year. QIC = 7808")
+cat("Best Independence: age, bmi, sex, tau_base, year, age:year and bmi:year. QIC = 7808")
 
+
+
+
+# With Unstructured and only keeping year
+full_model_un_total <- geeglm(
+  cdrsb ~ (sex + age + bmi + ab_base + tau_base + adl_num) * year,
+  family = binomial("logit"), 
+  data = alz_clean, 
+  id = sample, 
+  waves = year_seq, 
+  corstr = "unstructured",
+  na.action = "na.fail"
+)
+
+# Try all combinations that have sex, age, bmi and year
+results_un_total <- dredge(
+  full_model_un_total, 
+  rank = "QIC", 
+  fixed = c("year") 
+)
+
+# Compare using QIC
+best_model_un_total <- get.models(results_un_total, subset = 1)[[1]]
+summary(best_model_un_total)
+head(results_un_total)
 
 
 
