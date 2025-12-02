@@ -69,9 +69,12 @@ data alzheimer_long_centered;
     set alzheimer_long_centered;
     /* add log-transformed time; handle zeros if needed */
     LOGTIME = log(TIME);
+	LOGAGE = log(AGE_STD);
 run;
 
 
+/* The following models do currently implement log(age), they use standardized age. */
+/* fit may improve if we switch to log(age) */
 
 proc genmod data=alzheimer_long_centered descending;
     class PATID SEX TIMECLSS;
