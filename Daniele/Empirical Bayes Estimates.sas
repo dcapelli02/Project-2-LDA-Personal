@@ -192,3 +192,35 @@ proc sgplot data=plot_data;
     yaxis label="Probability (CDRSB ≥ 10)";
     xaxis label="Years";
 run;
+
+
+/* ============================================================= */
+/* 0. SALVATAGGIO DEI RANDOM EFFECTS (Empirical Bayes Estimates) */
+/*    --> Usando _RESIDUAL_ invece di SolutionR                  */
+/* ============================================================= 
+
+ods select all; 
+ods output SolutionR = EB_Estimates_Data;    <<< MODIFICA QUI
+
+
+/* ------------------------------------------------------------- */
+/* 1. ESECUZIONE DEL MODELLO GLIMMIX                             */
+/* ------------------------------------------------------------- 
+
+proc glimmix data=alzheimer_long_centered method=quad(qpoints = 10);
+class PATID SEX;
+
+model CDRSB_CAT(event = '1') = TIME BMI_STD TAUPET_STD
+TIME_BMI TIME_TAU
+/ dist=binary solution;
+
+random intercept TIME / subject=PATID type=un solution;
+run;
+
+ods select default;
+ods output CovParms = CovTest;*/
+
+
+
+
+
