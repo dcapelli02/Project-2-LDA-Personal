@@ -46,16 +46,30 @@ data alzheimer_long;
      	TIME TIMECLSS CDRSB CDRSB_CAT ABPET TAUPET ABPET0 TAUPET0;
 run;
 
+proc means data=ALZHEIMER_LONG noprint;
+    var ABPET TAUPET; 
+    output out=bio_stats mean=m_ab m_tau std=s_ab s_tau;
+run;
+
+data alzheimer_long_centered;
+    if _n_=1 then set bio_stats;
+    set alzheimer_long;
+    
+    ABPET_STD = (ABPET - m_ab) / s_ab;
+    TAUPET_STD = (TAUPET - m_tau) / s_tau;
+run;
+
+
 /* Empirical Bayes Predictions */
 
 /* Empirical Bayes Predictions are the random effects predictions b_i */
 
 /* GLMM (QUAD - Adaptive Gaussian Quadrature)*/
-proc glimmix data=alzheimer_long method=QUAD(QPOINTS=10);
+proc glimmix data=alzheimer_long_centered method=QUAD(QPOINTS=10);
     class PATID SEX;
     
-    model CDRSB_CAT(descending) = TIME SEX AGE_STD BMI_STD ADL ABPET0 TAUPET0 
-          TIME*AGE_STD TIME*BMI_STD TIME*ADL TIME*ABPET0 TIME*TAUPET0 TIME*SEX
+    model CDRSB_CAT(descending) = TIME BMI_STD TAUPET_STD
+                               TIME * BMI TIME * TAUPET_STD
           / dist=binary link=logit solution;
           
     random intercept TIME/ subject=PATID TYPE=UN solution;
