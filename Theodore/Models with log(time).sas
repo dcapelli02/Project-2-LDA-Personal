@@ -41,7 +41,8 @@ data alzheimer_long;
             BMI_STD = (BMI - mean_bmi) / sd_bmi;
 
         	TIMECLSS = put(TIME, 1.);
-
+			LOGTIME = log(TIME+1);
+			LOGAGE = log(AGE);
 
             output;
         end;
@@ -65,16 +66,8 @@ data alzheimer_long_centered;
     TAUPET_STD = (TAUPET - m_tau) / s_tau;
 run;
 
-data alzheimer_long_centered;
-    set alzheimer_long_centered;
-    /* add log-transformed time; handle zeros if needed */
-    LOGTIME = log(TIME);
-	LOGAGE = log(AGE_STD);
-run;
 
 
-/* The following models do currently implement log(age), they use standardized age. */
-/* fit may improve if we switch to log(age) */
 
 proc genmod data=alzheimer_long_centered descending;
     class PATID SEX TIMECLSS;
