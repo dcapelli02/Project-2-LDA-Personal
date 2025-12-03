@@ -75,6 +75,7 @@ proc glimmix data=alzheimer_long_centered method=QUAD(QPOINTS=10);
     random intercept TIME/ subject=PATID TYPE=UN solution;
     
 	ods output SolutionR=eb_predictions;
+    output out=glmm_preds pred(ilink)=Predicted_Prob;
 run;
 
 /* Create dataset for Random Intercepts Only */
@@ -177,5 +178,30 @@ proc sgplot data=eb_slopes;
     
     yaxis grid;
     xaxis label="Random Slope Estimate";
+run;
+
+
+proc means data=glmm_preds nway noprint;
+    class TIME;
+    var CDRSB_CAT Predicted_Prob;
+    output out=plot_data mean=Observed_Prop Mean_Predicted;
+run;
+
+/* Plot */
+proc sgplot data=plot_data;
+    title "Observed vs. Predicted Risk over Time (GEE)";
+    
+
+    series x=TIME y=Observed_Prop / lineattrs=(color=black thickness=2) 
+           markerattrs=(symbol=circlefilled color=black) 
+           legendlabel="Observed Proportion";
+           
+
+    series x=TIME y=Mean_Predicted / lineattrs=(color=red pattern=dash thickness=2) 
+           markerattrs=(symbol=none) 
+           legendlabel="Predicted Probability (GEE)";
+           
+    yaxis label="Probability of Severe Dementia (CDRSB >= 10)" grid values=(0.2 to 0.7 by 0.1);
+    xaxis label="Years (Time)";
 run;
 
